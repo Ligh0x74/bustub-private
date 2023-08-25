@@ -7,13 +7,13 @@ namespace bustub {
 
 template <class T>
 auto Trie::Get(std::string_view key) const -> const T * {
-  //  throw NotImplementedException("Trie::Get is not implemented.");
+  // throw NotImplementedException("Trie::Get is not implemented.");
 
   // You should walk through the trie to find the node corresponding to the key. If the node doesn't exist, return
   // nullptr. After you find the node, you should use `dynamic_cast` to cast it to `const TrieNodeWithValue<T> *`. If
   // dynamic_cast returns `nullptr`, it means the type of the value is mismatched, and you should return nullptr.
   // Otherwise, return the value.
-  
+
   if (root_ == nullptr) {
     return nullptr;
   }
@@ -31,7 +31,7 @@ auto Trie::Get(std::string_view key) const -> const T * {
 template <class T>
 auto Trie::Put(std::string_view key, T value) const -> Trie {
   // Note that `T` might be a non-copyable type. Always use `std::move` when creating `shared_ptr` on that value.
-  //  throw NotImplementedException("Trie::Put is not implemented.");
+  // throw NotImplementedException("Trie::Put is not implemented.");
 
   // You should walk through the trie and create new nodes if necessary. If the node corresponding to the key already
   // exists, you should create a new `TrieNodeWithValue`.
@@ -62,7 +62,8 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
     }
     if (it == key.cend() - 1 && old_cur->children_.count(*it) != 0) {
       old_cur = old_cur->children_.at(*it);
-      new_cur->children_[*it] = std::make_shared<TrieNodeWithValue<T>>(old_cur->children_,std::make_shared<T>(std::move(value)));
+      new_cur->children_[*it] =
+          std::make_shared<TrieNodeWithValue<T>>(old_cur->children_, std::make_shared<T>(std::move(value)));
       return Trie(root);
     }
   }
@@ -76,7 +77,7 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
 }
 
 auto Trie::Remove(std::string_view key) const -> Trie {
-  //  throw NotImplementedException("Trie::Remove is not implemented.");
+  // throw NotImplementedException("Trie::Remove is not implemented.");
 
   // You should walk through the trie and remove nodes if necessary. If the node doesn't contain a value any more,
   // you should convert it to `TrieNode`. If a node doesn't have children any more, you should remove it.
