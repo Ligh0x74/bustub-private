@@ -209,5 +209,7 @@ class BufferPoolManager {
 
   // TODO(student): You may add additional private members and helper functions
   auto FetchFrame(frame_id_t *frame_id, page_id_t page_id) -> bool;
+
+  std::mutex *page_latch_;
 };
 }  // namespace bustub
