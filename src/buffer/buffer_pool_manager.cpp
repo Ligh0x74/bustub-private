@@ -159,6 +159,8 @@ void BufferPoolManager::FlushAllPages() {
       std::thread t(&DiskManager::WritePage, disk_manager_, page.page_id_, page.data_);
       threads.emplace(frame_id, std::move(t));
       page.is_dirty_ = false;
+    } else {
+      page_latch_[frame_id].unlock();
     }
   }
   latch.unlock();
