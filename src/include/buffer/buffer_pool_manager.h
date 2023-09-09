@@ -211,5 +211,9 @@ class BufferPoolManager {
   auto FetchFrame(frame_id_t *frame_id, page_id_t page_id) -> bool;
 
   std::mutex *page_latch_;
+
+  std::unordered_map<page_id_t, char *> page_cache_;
+
+  std::mutex cache_latch_;
 };
 }  // namespace bustub

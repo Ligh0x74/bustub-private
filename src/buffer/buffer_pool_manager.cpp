@@ -41,6 +41,9 @@ BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager
 BufferPoolManager::~BufferPoolManager() {
   delete[] pages_;
   delete[] page_latch_;
+  for (auto &[page_id, data] : page_cache_) {
+    delete[] data;
+  }
 }
 
 auto BufferPoolManager::FetchFrame(frame_id_t *frame_id, page_id_t page_id) -> bool {
@@ -57,6 +60,10 @@ auto BufferPoolManager::FetchFrame(frame_id_t *frame_id, page_id_t page_id) -> b
     if (page_id == INVALID_PAGE_ID) {
       valid = false;
       page_id = AllocatePage();
+      std::lock_guard<std::mutex> cache_latch(cache_latch_);
+      char *cache = new char[BUSTUB_PAGE_SIZE];
+      memset(cache, 0, BUSTUB_PAGE_SIZE);
+      page_cache_.emplace(page_id, cache);
     }
     if (!free_list_.empty()) {
       *frame_id = free_list_.front();
@@ -75,7 +82,9 @@ auto BufferPoolManager::FetchFrame(frame_id_t *frame_id, page_id_t page_id) -> b
       page_latch_[*frame_id].lock();
       latch.unlock();
       if (page->is_dirty_) {
-        disk_manager_->WritePage(page->page_id_, page->data_);
+        std::lock_guard<std::mutex> cache_latch(cache_latch_);
+        memcpy(page_cache_.at(page->page_id_), page->data_, BUSTUB_PAGE_SIZE);
+        // disk_manager_->WritePage(page->page_id_, page->data_);
         page->is_dirty_ = false;
       }
       page->ResetMemory();
@@ -83,7 +92,9 @@ auto BufferPoolManager::FetchFrame(frame_id_t *frame_id, page_id_t page_id) -> b
     }
     page->page_id_ = page_id;
     if (valid) {
-      disk_manager_->ReadPage(page->page_id_, page->data_);
+      std::lock_guard<std::mutex> cache_latch(cache_latch_);
+      memcpy(page->data_, page_cache_.at(page->page_id_), BUSTUB_PAGE_SIZE);
+      // disk_manager_->ReadPage(page->page_id_, page->data_);
     }
   }
   replacer_->RecordAccess(*frame_id);
@@ -140,7 +151,9 @@ auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool {
   std::lock_guard<std::mutex> page_latch(page_latch_[frame_id]);
   latch.unlock();
   if (page.is_dirty_) {
-    disk_manager_->WritePage(page.page_id_, page.data_);
+    std::lock_guard<std::mutex> cache_latch(cache_latch_);
+    memcpy(page_cache_.at(page.page_id_), page.data_, BUSTUB_PAGE_SIZE);
+    // disk_manager_->WritePage(page.page_id_, page.data_);
     page.is_dirty_ = false;
   }
   return true;
