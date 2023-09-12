@@ -27,13 +27,16 @@ enum class AccessType { Unknown = 0, Get, Scan };
 
 class LRUKNode {
  public:
-  explicit LRUKNode(size_t k, size_t timestamp) : k_(k) { history_.push_back(timestamp); }
+  explicit LRUKNode(size_t k, size_t timestamp, bool is_write) : k_(k), is_write_(is_write) {
+    history_.push_back(timestamp);
+  }
 
   auto Front() const -> size_t { return history_.front(); }
 
   auto Size() const -> size_t { return history_.size(); }
 
-  void Add(size_t timestamp) {
+  void Add(size_t timestamp, bool is_write) {
+    is_write_ &= is_write;
     if (history_.size() == k_) {
       history_.pop_front();
     }
@@ -44,6 +47,8 @@ class LRUKNode {
 
   auto IsEvictable() const -> bool { return is_evictable_; }
 
+  auto IsWrite() const -> bool { return is_write_; }
+
  private:
   /** History of last seen K timestamps of this page. Least recent timestamp stored in front. */
   // Remove maybe_unused if you start using them. Feel free to change the member variables as you want.
@@ -52,6 +57,7 @@ class LRUKNode {
   size_t k_;
   [[maybe_unused]] frame_id_t fid_;
   bool is_evictable_{false};
+  bool is_write_;
 };
 
 /**

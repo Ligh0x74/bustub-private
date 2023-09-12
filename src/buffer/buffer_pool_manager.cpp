@@ -43,7 +43,7 @@ BufferPoolManager::~BufferPoolManager() {
   delete[] page_latch_;
 }
 
-auto BufferPoolManager::FetchFrame(frame_id_t *frame_id, page_id_t page_id) -> bool {
+auto BufferPoolManager::FetchFrame(frame_id_t *frame_id, page_id_t page_id, AccessType access_type) -> bool {
   std::unique_lock<std::mutex> latch(latch_);
   Page *page;
   if (page_table_.count(page_id) == 1) {
@@ -86,7 +86,7 @@ auto BufferPoolManager::FetchFrame(frame_id_t *frame_id, page_id_t page_id) -> b
       disk_manager_->ReadPage(page->page_id_, page->data_);
     }
   }
-  replacer_->RecordAccess(*frame_id);
+  replacer_->RecordAccess(*frame_id, access_type);
   if (page->pin_count_++ == 0) {
     replacer_->SetEvictable(*frame_id, false);
   }
@@ -105,7 +105,7 @@ auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
 
 auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType access_type) -> Page * {
   frame_id_t frame_id;
-  if (!FetchFrame(&frame_id, page_id)) {
+  if (!FetchFrame(&frame_id, page_id, access_type)) {
     return nullptr;
   }
   return &pages_[frame_id];

@@ -208,7 +208,7 @@ class BufferPoolManager {
   }
 
   // TODO(student): You may add additional private members and helper functions
-  auto FetchFrame(frame_id_t *frame_id, page_id_t page_id) -> bool;
+  auto FetchFrame(frame_id_t *frame_id, page_id_t page_id, AccessType access_type = AccessType::Unknown) -> bool;
 
   std::mutex *page_latch_;
 };

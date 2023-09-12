@@ -28,6 +28,10 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
     if (!node.IsEvictable()) {
       continue;
     }
+    if (node.IsWrite()) {
+      *frame_id = id;
+      break;
+    }
     if (node.Size() < k_) {
       max_k_distance = SIZE_MAX;
       if (earliest_timestamp > node.Front()) {
@@ -47,15 +51,16 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
   return true;
 }
 
-void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType access_type) {
+void LRUKReplacer::RecordAccess(frame_id_t frame_id, AccessType access_type) {
   if (static_cast<size_t>(frame_id) >= replacer_size_) {
     throw Exception("LRUKReplacer::Frame id is invalid.");
   }
   std::lock_guard<std::mutex> latch(latch_);
+  bool is_write = access_type == AccessType::Scan;
   if (node_store_.count(frame_id) == 1) {
-    node_store_.at(frame_id).Add(current_timestamp_);
+    node_store_.at(frame_id).Add(current_timestamp_, is_write);
   } else {
-    node_store_.emplace(frame_id, LRUKNode(k_, current_timestamp_));
+    node_store_.emplace(frame_id, LRUKNode(k_, current_timestamp_, is_write));
   }
   current_timestamp_++;
 }
