@@ -163,9 +163,6 @@ void BufferPoolManager::FlushAllPages() {
   std::unique_lock<std::mutex> latch(latch_);
   std::unordered_map<frame_id_t, std::thread> threads;
   for (auto &[page_id, frame_id] : page_table_) {
-    if (page_table_.count(page_id) == 0) {
-      continue;
-    }
     auto &page = pages_[frame_id];
     page_latch_[frame_id].lock();
     if (page.is_dirty_) {
