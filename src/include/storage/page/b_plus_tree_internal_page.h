@@ -66,6 +66,12 @@ class BPlusTreeInternalPage : public BPlusTreePage {
    */
   auto ValueIndex(const ValueType &value) const -> int;
 
+  auto Search(const KeyType &key, const KeyComparator &comparator) const -> int;
+
+  auto Split(BPlusTreeInternalPage &new_page) -> KeyType;
+
+  void Insert(const std::optional<KeyType> &opt, const ValueType &value, const KeyComparator &comparator);
+
   /**
    *
    * @param index the index
