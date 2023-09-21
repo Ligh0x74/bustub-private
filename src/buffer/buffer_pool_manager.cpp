@@ -105,7 +105,7 @@ auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
 
 auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType access_type) -> Page * {
   frame_id_t frame_id;
-  if (!FetchFrame(&frame_id, page_id)) {
+  if (page_id == INVALID_PAGE_ID || !FetchFrame(&frame_id, page_id)) {
     return nullptr;
   }
   return &pages_[frame_id];
