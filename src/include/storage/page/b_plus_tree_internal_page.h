@@ -72,6 +72,12 @@ class BPlusTreeInternalPage : public BPlusTreePage {
 
   void Insert(const std::optional<KeyType> &opt, const ValueType &value, const KeyComparator &comparator);
 
+  void Delete(const KeyType &key, const KeyComparator &comparator);
+
+  auto Redistribute(BPlusTreeInternalPage &from, bool is_right) -> KeyType;
+
+  auto Merge(BPlusTreeInternalPage &from) -> KeyType;
+
   /**
    *
    * @param index the index

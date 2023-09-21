@@ -67,6 +67,12 @@ class BPlusTreeLeafPage : public BPlusTreePage {
 
   auto Split(BPlusTreeLeafPage &new_page) -> KeyType;
 
+  void Delete(const KeyType &key, const KeyComparator &comparator);
+
+  auto Redistribute(BPlusTreeLeafPage &from, bool is_right) -> KeyType;
+
+  auto Merge(BPlusTreeLeafPage &from) -> KeyType;
+
   /**
    * @brief for test only return a string representing all keys in
    * this leaf page formatted as "(key1,key2,key3,...)"

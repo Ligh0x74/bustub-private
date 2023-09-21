@@ -47,7 +47,12 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetKeyAt(int index, const KeyType &key) { a
  * offset)
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueAt(int index) const -> ValueType { return array_[index].second; }
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueAt(int index) const -> ValueType {
+  if (index < 0 || index >= GetSize()) {
+    return INVALID_PAGE_ID;
+  }
+  return array_[index].second;
+}
 
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Search(const KeyType &key, const KeyComparator &comparator) const -> int {
@@ -82,6 +87,44 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Insert(const std::optional<KeyType> &opt, c
   array_[index].first = key;
   array_[index].second = value;
   IncreaseSize(1);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Delete(const KeyType &key, const KeyComparator &comparator) {
+  int index = Search(key, comparator);
+  for (int i = index + 1; i < GetSize(); i++) {
+    array_[i - 1] = array_[i];
+  }
+  IncreaseSize(-1);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Redistribute(BPlusTreeInternalPage &from, bool is_right) -> KeyType {
+  if (is_right) {
+    array_[GetSize()] = from.array_[0];
+    IncreaseSize(1);
+    for (int i = 0; i < from.GetSize() - 1; i++) {
+      from.array_[i] = from.array_[i + 1];
+    }
+    from.IncreaseSize(-1);
+    return from.array_[0].first;
+  }
+  for (int i = GetSize() - 1; i >= 0; i--) {
+    array_[i + 1] = array_[i];
+  }
+  array_[0] = from.array_[GetSize() - 1];
+  IncreaseSize(1);
+  from.IncreaseSize(-1);
+  return array_[0].first;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Merge(BPlusTreeInternalPage &from) -> KeyType {
+  for (int i = 0; i < from.GetSize(); i++) {
+    array_[GetSize() + i] = from.array_[i];
+  }
+  IncreaseSize(from.GetSize());
+  return from.array_[0].first;
 }
 
 // valuetype for internalNode should be page id_t

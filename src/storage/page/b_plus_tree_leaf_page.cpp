@@ -90,6 +90,47 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::Split(BPlusTreeLeafPage &new_page) -> KeyType {
   return new_array[0].first;
 }
 
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::Delete(const KeyType &key, const KeyComparator &comparator) {
+  int index = Search(key, comparator);
+  if (index < 0) {
+    return;
+  }
+  for (int i = index + 1; i < GetSize(); i++) {
+    array_[i - 1] = array_[i];
+  }
+  IncreaseSize(-1);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::Redistribute(BPlusTreeLeafPage &from, bool is_right) -> KeyType {
+  if (is_right) {
+    array_[GetSize()] = from.array_[0];
+    IncreaseSize(1);
+    for (int i = 0; i < from.GetSize() - 1; i++) {
+      from.array_[i] = from.array_[i + 1];
+    }
+    from.IncreaseSize(-1);
+    return from.array_[0].first;
+  }
+  for (int i = GetSize() - 1; i >= 0; i--) {
+    array_[i + 1] = array_[i];
+  }
+  array_[0] = from.array_[GetSize() - 1];
+  IncreaseSize(1);
+  from.IncreaseSize(-1);
+  return array_[0].first;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::Merge(BPlusTreeLeafPage &from) -> KeyType {
+  for (int i = 0; i < from.GetSize(); i++) {
+    array_[GetSize() + i] = from.array_[i];
+  }
+  IncreaseSize(from.GetSize());
+  return from.array_[0].first;
+}
+
 template class BPlusTreeLeafPage<GenericKey<4>, RID, GenericComparator<4>>;
 template class BPlusTreeLeafPage<GenericKey<8>, RID, GenericComparator<8>>;
 template class BPlusTreeLeafPage<GenericKey<16>, RID, GenericComparator<16>>;
