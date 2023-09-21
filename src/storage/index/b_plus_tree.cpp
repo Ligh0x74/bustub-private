@@ -54,6 +54,10 @@ auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result
   auto root_page_id = header_page->root_page_id_;
   header_guard.Drop();
 
+  if (root_page_id == INVALID_PAGE_ID) {
+    return false;
+  }
+
   auto node_guard = bpm_->FetchPageRead(root_page_id);
   auto node_page = node_guard.As<BPlusTreePage>();
   while (!node_page->IsLeafPage()) {
