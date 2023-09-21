@@ -153,6 +153,7 @@ auto BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transact
     auto new_leaf_page = static_cast<LeafPage *>(new_node_page);
     new_leaf_page->Init(leaf_max_size_);
     auto new_key = leaf_page->Split(*new_leaf_page);
+    new_leaf_page->SetNextPageId(leaf_page->GetNextPageId());
     leaf_page->SetNextPageId(new_page_id);
 
     if (ctx.write_set_.back().PageId() == ctx.root_page_id_) {
