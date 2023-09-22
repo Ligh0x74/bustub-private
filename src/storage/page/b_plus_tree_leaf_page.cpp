@@ -70,7 +70,7 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::Insert(const KeyType &key, const ValueType &val
     return false;
   }
   index = -index - 1;
-  for (int i = GetSize(); i >= index; i--) {
+  for (int i = GetSize() - 1; i >= index; i--) {
     array_[i + 1] = array_[i];
   }
   array_[index].first = key;
@@ -82,7 +82,7 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::Insert(const KeyType &key, const ValueType &val
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_LEAF_PAGE_TYPE::Split(BPlusTreeLeafPage &new_page) -> KeyType {
   auto new_array = new_page.array_;
-  for (int i = GetMinSize(); i <= GetSize(); i++) {
+  for (int i = GetMinSize(); i < GetSize(); i++) {
     new_array[i - GetMinSize()] = array_[i];
   }
   new_page.SetSize(GetSize() - GetMinSize());
@@ -116,7 +116,7 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::Redistribute(BPlusTreeLeafPage &from, bool is_r
   for (int i = GetSize() - 1; i >= 0; i--) {
     array_[i + 1] = array_[i];
   }
-  array_[0] = from.array_[GetSize() - 1];
+  array_[0] = from.array_[from.GetSize() - 1];
   IncreaseSize(1);
   from.IncreaseSize(-1);
   return array_[0].first;
@@ -130,6 +130,9 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::Merge(BPlusTreeLeafPage &from) -> KeyType {
   IncreaseSize(from.GetSize());
   return from.array_[0].first;
 }
+
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::KeyValueAt(int index) const -> const MappingType & { return array_[index]; }
 
 template class BPlusTreeLeafPage<GenericKey<4>, RID, GenericComparator<4>>;
 template class BPlusTreeLeafPage<GenericKey<8>, RID, GenericComparator<8>>;

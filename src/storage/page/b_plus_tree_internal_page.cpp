@@ -61,14 +61,26 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Search(const KeyType &key, const KeyCompara
 }
 
 INDEX_TEMPLATE_ARGUMENTS
-auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Split(BPlusTreeInternalPage &new_page) -> KeyType {
-  auto new_array = new_page.array_;
-  for (int i = GetMinSize(); i <= GetSize(); i++) {
-    new_array[i - GetMinSize()] = array_[i];
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::SplitAndInsert(const KeyType &key, const ValueType &value,
+                                                    const KeyComparator &comparator, BPlusTreeInternalPage &new_page)
+    -> KeyType {
+  int index = Search(key, comparator) + 1;
+  for (int i = GetMinSize(); i < GetSize(); i++) {
+    int j = i >= index ? i + 1 : i;
+    new_page.array_[j - GetMinSize()] = array_[i];
   }
-  new_page.SetSize(GetSize() - GetMinSize());
+  if (index < GetMinSize()) {
+    new_page.array_[0] = array_[GetMinSize() - 1];
+    for (int i = index; i < GetMinSize() - 1; i++) {
+      array_[i + 1] = array_[i];
+    }
+    array_[index] = {key, value};
+  } else {
+    new_page.array_[index - GetMinSize()] = {key, value};
+  }
+  new_page.SetSize(GetMinSize());
   SetSize(GetMinSize());
-  return new_array[0].first;
+  return new_page.array_[0].first;
 }
 
 INDEX_TEMPLATE_ARGUMENTS
@@ -81,7 +93,7 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Insert(const std::optional<KeyType> &opt, c
   }
   auto key = opt.value();
   int index = Search(key, comparator) + 1;
-  for (int i = GetSize(); i >= index; i--) {
+  for (int i = GetSize() - 1; i >= index; i--) {
     array_[i + 1] = array_[i];
   }
   array_[index].first = key;
@@ -112,7 +124,7 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Redistribute(BPlusTreeInternalPage &from, b
   for (int i = GetSize() - 1; i >= 0; i--) {
     array_[i + 1] = array_[i];
   }
-  array_[0] = from.array_[GetSize() - 1];
+  array_[0] = from.array_[from.GetSize() - 1];
   IncreaseSize(1);
   from.IncreaseSize(-1);
   return array_[0].first;

@@ -73,6 +73,8 @@ class BPlusTreeLeafPage : public BPlusTreePage {
 
   auto Merge(BPlusTreeLeafPage &from) -> KeyType;
 
+  auto KeyValueAt(int index) const -> const MappingType &;
+
   /**
    * @brief for test only return a string representing all keys in
    * this leaf page formatted as "(key1,key2,key3,...)"
