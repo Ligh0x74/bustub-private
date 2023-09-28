@@ -217,5 +217,9 @@ class BufferPoolManager {
   int *bm_io_in_progress_;  // read = 1, write = 2
 
   std::condition_variable *bm_io_cond_;
+
+  std::shared_mutex write_table_lock_;
+
+  std::unordered_map<page_id_t, frame_id_t> write_table_;
 };
 }  // namespace bustub
