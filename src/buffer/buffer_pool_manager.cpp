@@ -72,11 +72,11 @@ auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
   std::unique_lock<std::mutex> buffer_header_lock(buffer_header_lock_[frame_id]);
   page_table_.erase(pages_[frame_id].page_id_);
   page_table_.emplace(*page_id, frame_id);
-  buf_mapping_lock.unlock();
   if (pages_[frame_id].is_dirty_) {
     std::unique_lock<std::shared_mutex> write_table_lock(write_table_lock_);
     write_table_.emplace(pages_[frame_id].page_id_, frame_id);
     write_table_lock.unlock();
+    buf_mapping_lock.unlock();
 
     pages_[frame_id].is_dirty_ = false;
     bm_io_in_progress_[frame_id] = 1;
@@ -87,6 +87,8 @@ auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
     write_table_lock.lock();
     write_table_.erase(pages_[frame_id].page_id_);
     write_table_lock.unlock();
+  } else {
+    buf_mapping_lock.unlock();
   }
 
   bm_io_in_progress_[frame_id] = 0;
@@ -141,11 +143,11 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
     std::unique_lock<std::mutex> buffer_header_lock(buffer_header_lock_[frame_id]);
     page_table_.erase(pages_[frame_id].page_id_);
     page_table_.emplace(page_id, frame_id);
-    buf_mapping_lock.unlock();
     if (pages_[frame_id].is_dirty_) {
       std::unique_lock<std::shared_mutex> write_table_lock(write_table_lock_);
       write_table_.emplace(pages_[frame_id].page_id_, frame_id);
       write_table_lock.unlock();
+      buf_mapping_lock.unlock();
 
       pages_[frame_id].is_dirty_ = false;
       bm_io_in_progress_[frame_id] = 1;
@@ -156,6 +158,8 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
       write_table_lock.lock();
       write_table_.erase(pages_[frame_id].page_id_);
       write_table_lock.unlock();
+    } else {
+      buf_mapping_lock.unlock();
     }
 
     pages_[frame_id].ResetMemory();
