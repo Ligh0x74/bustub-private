@@ -208,8 +208,14 @@ class BufferPoolManager {
   }
 
   // TODO(student): You may add additional private members and helper functions
-  auto FetchFrame(frame_id_t *frame_id, page_id_t page_id) -> bool;
+  std::shared_mutex buf_mapping_lock_;
 
-  std::mutex *page_latch_;
+  std::mutex buffer_strategy_lock_;
+
+  std::mutex *buffer_header_lock_;
+
+  int *bm_io_in_progress_;  // read = 1, write = 2
+
+  std::condition_variable *bm_io_cond_;
 };
 }  // namespace bustub
