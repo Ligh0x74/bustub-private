@@ -28,6 +28,10 @@ class IndexIterator {
   explicit IndexIterator(BufferPoolManager *buffer_pool_manager, ReadPageGuard read_guard, const LeafPage *leaf_page,
                          int index = 0);
 
+  IndexIterator() = default;
+
+  IndexIterator(IndexIterator &&) noexcept = default;
+
   ~IndexIterator();  // NOLINT
 
   auto IsEnd() -> bool;

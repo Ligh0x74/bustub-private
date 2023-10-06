@@ -393,7 +393,7 @@ auto BPLUSTREE_TYPE::Begin() -> INDEXITERATOR_TYPE {
   auto root_page_id = header_page->root_page_id_;
 
   if (root_page_id == INVALID_PAGE_ID) {
-    throw std::runtime_error("INVALID_PAGE_ID.");
+    return INDEXITERATOR_TYPE();
   }
 
   auto node_guard = bpm_->FetchPageRead(root_page_id);
@@ -422,7 +422,7 @@ auto BPLUSTREE_TYPE::Begin(const KeyType &key) -> INDEXITERATOR_TYPE {
   auto root_page_id = header_page->root_page_id_;
 
   if (root_page_id == INVALID_PAGE_ID) {
-    throw std::runtime_error("INVALID_PAGE_ID.");
+    return INDEXITERATOR_TYPE();
   }
 
   auto node_guard = bpm_->FetchPageRead(root_page_id);
@@ -453,7 +453,7 @@ auto BPLUSTREE_TYPE::End() -> INDEXITERATOR_TYPE {
   auto root_page_id = header_page->root_page_id_;
 
   if (root_page_id == INVALID_PAGE_ID) {
-    throw std::runtime_error("INVALID_PAGE_ID.");
+    return INDEXITERATOR_TYPE();
   }
 
   auto node_guard = bpm_->FetchPageRead(root_page_id);
