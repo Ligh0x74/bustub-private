@@ -23,7 +23,7 @@ INDEXITERATOR_TYPE::~IndexIterator() = default;  // NOLINT
 
 INDEX_TEMPLATE_ARGUMENTS
 auto INDEXITERATOR_TYPE::IsEnd() -> bool {
-  return leaf_page_->GetNextPageId() == INVALID_PAGE_ID && leaf_page_->GetSize() == index_;
+  return leaf_page_ == nullptr || (leaf_page_->GetNextPageId() == INVALID_PAGE_ID && leaf_page_->GetSize() == index_);
 }
 
 INDEX_TEMPLATE_ARGUMENTS
