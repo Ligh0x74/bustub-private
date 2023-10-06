@@ -32,10 +32,7 @@ auto BPLUSTREE_TYPE::IsEmpty() const -> bool {
   auto header_guard = bpm_->FetchPageRead(header_page_id_);
   auto header_page = header_guard.As<BPlusTreeHeaderPage>();
   auto root_page_id = header_page->root_page_id_;
-  auto node_guard = bpm_->FetchPageRead(root_page_id);
-  header_guard.Drop();
-  auto node_page = node_guard.As<BPlusTreePage>();
-  return node_page->GetSize() == 0;
+  return root_page_id == INVALID_PAGE_ID;
 }
 /*****************************************************************************
  * SEARCH
@@ -286,7 +283,9 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *txn) {
 
   if (ctx.IsRootPage(ctx.write_set_.back().PageId())) {
     if (leaf_page->GetSize() == 0) {
-      // do something or not.
+      ctx.header_page_->AsMut<BPlusTreeHeaderPage>()->root_page_id_ = INVALID_PAGE_ID;
+      ctx.write_set_.pop_back();  // may be fetched before delete.
+      bpm_->DeletePage(ctx.root_page_id_);
     }
     return;
   }
