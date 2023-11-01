@@ -13,6 +13,7 @@
 #include "execution/executors/nested_loop_join_executor.h"
 #include "binder/table_ref/bound_join_ref.h"
 #include "common/exception.h"
+#include "type/value_factory.h"
 
 namespace bustub {
 
@@ -69,7 +70,7 @@ auto NestedLoopJoinExecutor::Next(Tuple *tuple, RID *rid) -> bool {
       }
       for (size_t i = 0; i < right_executor_->GetOutputSchema().GetColumnCount(); ++i) {
         auto type = right_executor_->GetOutputSchema().GetColumn(i).GetType();
-        values.emplace_back(type, BUSTUB_INT32_NULL);
+        values.emplace_back(ValueFactory::GetNullValueByType(type));
       }
       *tuple = Tuple{values, &GetOutputSchema()};
       return true;
