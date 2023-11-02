@@ -13,12 +13,48 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
+#include <vector>
 
+#include "common/util/hash_util.h"
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
 #include "execution/plans/hash_join_plan.h"
 #include "storage/table/tuple.h"
+
+namespace bustub {
+struct JoinKey {
+  std::vector<Value> keys_;
+
+  auto operator==(const JoinKey &other) const -> bool {
+    for (uint32_t i = 0; i < other.keys_.size(); i++) {
+      if (keys_[i].CompareEquals(other.keys_[i]) != CmpBool::CmpTrue) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
+}  // namespace bustub
+
+namespace std {
+
+template <>
+struct hash<bustub::JoinKey> {
+  auto operator()(const bustub::JoinKey &join_key) const -> std::size_t {
+    size_t curr_hash = 0;
+    for (const auto &key : join_key.keys_) {
+      if (!key.IsNull()) {
+        curr_hash = bustub::HashUtil::CombineHashes(curr_hash, bustub::HashUtil::HashValue(&key));
+      }
+    }
+    return curr_hash;
+  }
+};
+
+}  // namespace std
 
 namespace bustub {
 
@@ -51,9 +87,45 @@ class HashJoinExecutor : public AbstractExecutor {
   /** @return The output schema for the join */
   auto GetOutputSchema() const -> const Schema & override { return plan_->OutputSchema(); };
 
+  auto MakeLeftJoinKey(const Tuple *tuple) -> JoinKey {
+    std::vector<Value> keys;
+    for (const auto &expr : plan_->left_key_expressions_) {
+      keys.emplace_back(expr->Evaluate(tuple, left_executor_->GetOutputSchema()));
+    }
+    return {keys};
+  }
+
+  auto MakeRightJoinKey(const Tuple *tuple) -> JoinKey {
+    std::vector<Value> keys;
+    for (const auto &expr : plan_->right_key_expressions_) {
+      keys.emplace_back(expr->Evaluate(tuple, right_executor_->GetOutputSchema()));
+    }
+    return {keys};
+  }
+
  private:
   /** The NestedLoopJoin plan node to be executed. */
   const HashJoinPlanNode *plan_;
+
+  std::unique_ptr<AbstractExecutor> left_executor_;
+
+  std::unique_ptr<AbstractExecutor> right_executor_;
+
+  std::unordered_map<JoinKey, std::vector<Tuple>> left_ht_{};
+
+  std::unordered_map<JoinKey, std::vector<Tuple>>::const_iterator left_ht_iterator_{};
+
+  const std::vector<Tuple> *bucket_{nullptr};
+
+  std::vector<Tuple>::const_iterator bucket_iterator_;
+
+  Tuple right_tuple_;
+
+  RID right_rid_;
+
+  std::unordered_set<const Tuple *> left_rid_set_;
+
+  bool ok_{true};
 };
 
 }  // namespace bustub
