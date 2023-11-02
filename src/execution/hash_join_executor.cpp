@@ -31,6 +31,10 @@ HashJoinExecutor::HashJoinExecutor(ExecutorContext *exec_ctx, const HashJoinPlan
 void HashJoinExecutor::Init() {
   left_executor_->Init();
   right_executor_->Init();
+  left_ht_.clear();
+  bucket_ = nullptr;
+  left_rid_set_.clear();
+  ok_ = true;
 
   Tuple tuple;
   RID rid;
