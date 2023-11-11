@@ -330,6 +330,12 @@ class LockManager {
                  std::unordered_set<txn_id_t> &visited, txn_id_t *abort_txn_id) -> bool;
   void UnlockAll();
 
+  auto TryLock(txn_id_t txn_id, LockRequestQueue *lock_request_queue, LockMode lock_mode) -> bool;
+  void GetCurrTableLockModAndLockSet(Transaction *txn, const table_oid_t &oid, LockMode &curr_table_lock_mode,
+                                     std::shared_ptr<std::unordered_set<table_oid_t>> &curr_table_lock_set);
+  void GetRequestedTableLockModAndLockSet(Transaction *txn, const table_oid_t &oid, LockMode requested_table_lock_mode,
+                                          std::shared_ptr<std::unordered_set<table_oid_t>> &requested_table_lock_set);
+
   /** Structure that holds lock requests for a given table oid */
   std::unordered_map<table_oid_t, std::shared_ptr<LockRequestQueue>> table_lock_map_;
   /** Coordination */
