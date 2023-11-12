@@ -122,6 +122,9 @@ auto LockManager::UpgradeLockTable(Transaction *txn, LockMode lock_mode, const t
   std::unique_lock<std::mutex> latch(q->latch_);
   table_lock_map_latch.unlock();
   if (q->upgrading_ != INVALID_TXN_ID) {
+    q->request_queue_.remove_if([&](const std::shared_ptr<LockRequest> &lock_request) {
+      return lock_request->txn_id_ == txn->GetTransactionId();
+    });
     txn->SetState(TransactionState::ABORTED);
     throw TransactionAbortException(txn->GetTransactionId(), AbortReason::UPGRADE_CONFLICT);
   }
@@ -153,6 +156,9 @@ auto LockManager::UpgradeLockRow(Transaction *txn, LockMode lock_mode, const tab
   std::unique_lock<std::mutex> latch(q->latch_);
   row_lock_map_latch.unlock();
   if (q->upgrading_ != INVALID_TXN_ID) {
+    q->request_queue_.remove_if([&](const std::shared_ptr<LockRequest> &lock_request) {
+      return lock_request->txn_id_ == txn->GetTransactionId();
+    });
     txn->SetState(TransactionState::ABORTED);
     throw TransactionAbortException(txn->GetTransactionId(), AbortReason::UPGRADE_CONFLICT);
   }
@@ -267,12 +273,14 @@ auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oi
     throw TransactionAbortException(txn->GetTransactionId(), AbortReason::INCOMPATIBLE_UPGRADE);
   }
 
+  // 事务是否需要加锁
+  curr_table_lock_set->erase(oid);
+
   if (!UpgradeLockTable(txn, lock_mode, oid)) {
     return false;
   }
 
   // 事务是否需要加锁
-  curr_table_lock_set->erase(oid);
   requested_table_lock_set->insert(oid);
   return true;
 }
@@ -328,12 +336,14 @@ auto LockManager::LockRow(Transaction *txn, LockMode lock_mode, const table_oid_
       return true;
     }
 
+    // 事务是否需要加锁
+    (*txn->GetSharedRowLockSet())[oid].erase(rid);
+
     if (!UpgradeLockRow(txn, lock_mode, oid, rid)) {
       return false;
     }
 
     // 事务是否需要加锁
-    (*txn->GetSharedRowLockSet())[oid].erase(rid);
     (*txn->GetExclusiveRowLockSet())[oid].insert(rid);
     return true;
   }
