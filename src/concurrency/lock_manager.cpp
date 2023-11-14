@@ -331,6 +331,10 @@ auto LockManager::LockRow(Transaction *txn, LockMode lock_mode, const table_oid_
     return false;
   }
 
+  if (txn->IsRowExclusiveLocked(oid, rid)) {
+    return true;
+  }
+
   if (txn->IsRowSharedLocked(oid, rid)) {
     if (lock_mode == LockMode::SHARED) {
       return true;
@@ -346,14 +350,6 @@ auto LockManager::LockRow(Transaction *txn, LockMode lock_mode, const table_oid_
     // 事务是否需要加锁
     (*txn->GetExclusiveRowLockSet())[oid].insert(rid);
     return true;
-  }
-
-  if (txn->IsRowExclusiveLocked(oid, rid)) {
-    if (lock_mode == LockMode::EXCLUSIVE) {
-      return true;
-    }
-    txn->SetState(TransactionState::ABORTED);
-    throw TransactionAbortException(txn->GetTransactionId(), AbortReason::INCOMPATIBLE_UPGRADE);
   }
 
   std::unique_lock<std::mutex> row_lock_map_latch(row_lock_map_latch_);
@@ -477,6 +473,7 @@ void LockManager::RunCycleDetection() {
   while (enable_cycle_detection_) {
     std::this_thread::sleep_for(cycle_detection_interval);
     {  // TODO(students): detect deadlock
+      std::unique_lock<std::mutex> table_lock_map_latch(table_lock_map_latch_);
       for (const auto &[oid, q] : table_lock_map_) {
         for (const auto &i : q->request_queue_) {
           if (i->granted_) {
@@ -490,7 +487,9 @@ void LockManager::RunCycleDetection() {
           }
         }
       }
+      table_lock_map_latch.unlock();
 
+      std::unique_lock<std::mutex> row_lock_map_latch(row_lock_map_latch_);
       for (const auto &[rid, q] : row_lock_map_) {
         for (const auto &i : q->request_queue_) {
           if (i->granted_) {
@@ -504,6 +503,7 @@ void LockManager::RunCycleDetection() {
           }
         }
       }
+      row_lock_map_latch.unlock();
 
       txn_id_t txn_id;
       while (HasCycle(&txn_id)) {
@@ -511,6 +511,7 @@ void LockManager::RunCycleDetection() {
         for (auto &[t, v] : waits_for_) {
           RemoveEdge(t, txn_id);
         }
+        txn_manager_->GetTransaction(txn_id)->SetState(TransactionState::ABORTED);
         txn_manager_->Abort(txn_manager_->GetTransaction(txn_id));
       }
       waits_for_.clear();

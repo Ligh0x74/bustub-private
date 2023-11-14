@@ -20,9 +20,36 @@ InsertExecutor::InsertExecutor(ExecutorContext *exec_ctx, const InsertPlanNode *
                                std::unique_ptr<AbstractExecutor> &&child_executor)
     : AbstractExecutor(exec_ctx), plan_(plan), child_executor_(std::move(child_executor)) {}
 
-void InsertExecutor::Init() { child_executor_->Init(); }
+void InsertExecutor::Init() {
+  child_executor_->Init();
+
+  const auto &txn = exec_ctx_->GetTransaction();
+  if (!exec_ctx_->GetLockManager()->LockTable(txn, LockManager::LockMode::INTENTION_EXCLUSIVE, plan_->table_oid_)) {
+    throw ExecutionException("InsertExecutor Lock Fail");
+  }
+}
 
 auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
+  //  uint64_t cnt = 0;
+  //  while (true) {
+  //    bool status = child_executor_->Next(tuple, rid);
+  //    if (!status) {
+  //      break;
+  //    }
+  //    auto catalog = exec_ctx_->GetCatalog();
+  //    auto table_info = catalog->GetTable(plan_->table_oid_);
+  //    *rid = table_info->table_->InsertTuple({INVALID_TXN_ID, INVALID_TXN_ID, false}, *tuple).value();
+  //    for (auto index_info : catalog->GetTableIndexes(table_info->name_)) {
+  //      auto key_tuple = tuple->KeyFromTuple(table_info->schema_, *index_info->index_->GetKeySchema(),
+  //                                           index_info->index_->GetKeyAttrs());
+  //      index_info->index_->InsertEntry(key_tuple, *rid, nullptr);
+  //    }
+  //    ++cnt;
+  //  }
+  //  auto schema = Schema({{"row_num", BIGINT}});
+  //  *tuple = Tuple{{{BIGINT, cnt}}, &schema};
+  //  return ok_ = !ok_;
+
   uint64_t cnt = 0;
   while (true) {
     bool status = child_executor_->Next(tuple, rid);
@@ -31,7 +58,14 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
     }
     auto catalog = exec_ctx_->GetCatalog();
     auto table_info = catalog->GetTable(plan_->table_oid_);
-    *rid = table_info->table_->InsertTuple({INVALID_TXN_ID, INVALID_TXN_ID, false}, *tuple).value();
+
+    *rid = table_info->table_
+               ->InsertTuple({INVALID_TXN_ID, INVALID_TXN_ID, false}, *tuple, exec_ctx_->GetLockManager(),
+                             exec_ctx_->GetTransaction(), plan_->table_oid_)
+               .value();
+    exec_ctx_->GetTransaction()->AppendTableWriteRecord(
+        {plan_->table_oid_, *rid, exec_ctx_->GetCatalog()->GetTable(plan_->table_oid_)->table_.get()});
+
     for (auto index_info : catalog->GetTableIndexes(table_info->name_)) {
       auto key_tuple = tuple->KeyFromTuple(table_info->schema_, *index_info->index_->GetKeySchema(),
                                            index_info->index_->GetKeyAttrs());
